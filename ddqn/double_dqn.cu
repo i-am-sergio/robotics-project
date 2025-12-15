@@ -601,11 +601,11 @@ int main() {
         std::cout << "Memoria: " << prop.totalGlobalMem / (1024*1024) << " MB\n";
     }
     
-    int N = 5;
+    int N = 10;
     GridEnvironment env(N);
     CudaDoubleDQNAgent agent(env.get_state_size(), 64, env.get_action_size());
 
-    int episodes = 4000;
+    int episodes = 1000;
     
     auto start_time = std::chrono::high_resolution_clock::now();
 
