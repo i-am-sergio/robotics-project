@@ -1,0 +1,200 @@
+#include <iostream>
+#include <string>
+#include <thread>
+#include <chrono>
+#include <random>
+#include <atomic>
+#include <libwebsockets.h>
+#include <signal.h>
+
+std::string get_random_command() {
+    static const std::string commands[] = {"Arriba", "Abajo", "Izquierda", "Derecha"};
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_int_distribution<> dis(0, 3);
+    
+    return commands[dis(gen)];
+}
+
+std::string create_json_message(const std::string& command, int step) {
+    return "{\"command\":\"" + command + 
+           "\",\"step\":" + std::to_string(step) + 
+           ",\"source\":\"c++_libwebsockets_client\"}";
+}
+
+// Variables globales
+static std::atomic<bool> running(true);
+static std::atomic<bool> connected(false);
+static struct lws *global_wsi = nullptr;
+static int message_sent = 0;
+
+static int callback(struct lws *wsi, enum lws_callback_reasons reason, 
+                    void *user, void *in, size_t len) {
+    switch(reason) {
+        case LWS_CALLBACK_CLIENT_ESTABLISHED:
+            std::cout << "✅ WebSocket connection established" << std::endl;
+            connected = true;
+            global_wsi = wsi;
+            break;
+            
+        case LWS_CALLBACK_CLIENT_RECEIVE:
+            std::cout << "📥 Received: " << std::string((char*)in, len) << std::endl;
+            break;
+            
+        case LWS_CALLBACK_CLIENT_WRITEABLE:
+            if (connected) {
+                // Este callback se llama cuando podemos escribir
+                // La lógica de envío está en el hilo principal
+                break;
+            }
+            break;
+            
+        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+            std::cerr << "❌ Connection error" << std::endl;
+            connected = false;
+            running = false;
+            break;
+            
+        case LWS_CALLBACK_CLIENT_CLOSED:
+            std::cout << "🔌 Connection closed" << std::endl;
+            connected = false;
+            running = false;
+            break;
+    }
+    
+    return 0;
+}
+
+// Manejador de señal para Ctrl+C
+void signal_handler(int signum) {
+    std::cout << "\n🛑 Received interrupt signal, shutting down..." << std::endl;
+    running = false;
+}
+
+int main() {
+    // Configurar manejador de señales
+    signal(SIGINT, signal_handler);
+    
+    struct lws_context_creation_info info;
+    struct lws_client_connect_info connect_info;
+    struct lws_context *context;
+    
+    // Protocolo
+    struct lws_protocols protocols[] = {
+        {
+            "ws-protocol",
+            callback,
+            0,
+            1024,
+        },
+        { NULL, NULL, 0, 0 }
+    };
+    
+    // Inicializar contexto
+    memset(&info, 0, sizeof(info));
+    info.port = CONTEXT_PORT_NO_LISTEN;
+    info.protocols = protocols;
+    info.gid = -1;
+    info.uid = -1;
+    
+    context = lws_create_context(&info);
+    if (!context) {
+        std::cerr << "❌ Error creating libwebsockets context" << std::endl;
+        return 1;
+    }
+    
+    // Configurar conexión
+    memset(&connect_info, 0, sizeof(connect_info));
+    connect_info.context = context;
+    connect_info.address = "localhost";
+    connect_info.port = 5555;
+    connect_info.path = "/";
+    connect_info.host = connect_info.address;
+    connect_info.origin = connect_info.address;
+    connect_info.protocol = protocols[0].name;
+    connect_info.ietf_version_or_minus_one = -1;
+    
+    std::cout << "🚀 Starting libwebsockets client" << std::endl;
+    std::cout << "📡 Connecting to ws://localhost:5555" << std::endl;
+    
+    // Conectar
+    global_wsi = lws_client_connect_via_info(&connect_info);
+    if (!global_wsi) {
+        std::cerr << "❌ Error connecting to server" << std::endl;
+        lws_context_destroy(context);
+        return 1;
+    }
+    
+    std::cout << "📤 Sending commands every 1 second... (Press Ctrl+C to stop)" << std::endl;
+    
+    // Hilo para procesar eventos de libwebsockets
+    std::thread ws_thread([&context]() {
+        while (running) {
+            lws_service(context, 100);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    });
+    
+    // Esperar conexión
+    int connection_timeout = 0;
+    while (!connected && connection_timeout < 50) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        connection_timeout++;
+    }
+    
+    if (!connected) {
+        std::cerr << "❌ Connection timeout" << std::endl;
+        running = false;
+        ws_thread.join();
+        lws_context_destroy(context);
+        return 1;
+    }
+    
+    // Bucle principal para enviar mensajes
+    int step = 0;
+    while (running && message_sent < 100) { // Enviar hasta 100 mensajes o hasta Ctrl+C
+        if (connected && global_wsi) {
+            std::string command = get_random_command();
+            std::string message = create_json_message(command, ++step);
+            
+            // Preparar buffer
+            unsigned char *buffer = (unsigned char*)malloc(LWS_PRE + message.length());
+            if (!buffer) {
+                std::cerr << "❌ Memory allocation error" << std::endl;
+                break;
+            }
+            
+            memcpy(buffer + LWS_PRE, message.c_str(), message.length());
+            
+            // Enviar mensaje
+            int n = lws_write(global_wsi, buffer + LWS_PRE, message.length(), LWS_WRITE_TEXT);
+            free(buffer);
+            
+            if (n < 0) {
+                std::cerr << "❌ Error writing to WebSocket" << std::endl;
+                break;
+            }
+            
+            std::cout << "📤 Sent: " << command << " (Step: " << step << ")" << std::endl;
+            message_sent++;
+            
+            // Esperar 1 segundo
+            for (int i = 0; i < 10 && running; i++) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
+    
+    // Limpiar
+    running = false;
+    if (ws_thread.joinable()) {
+        ws_thread.join();
+    }
+    
+    lws_context_destroy(context);
+    std::cout << "\n👋 Client finished. Sent " << message_sent << " messages." << std::endl;
+    
+    return 0;
+}
