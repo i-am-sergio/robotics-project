@@ -49,6 +49,14 @@ public:
     
     // Para argmax
     int *d_argmax_result;
+
+    // Métodos para guardar/cargar
+    bool save_to_file(const std::string& filename);
+    bool load_from_file(const std::string& filename);
+    void save_weights_to_host();  // Helper para sincronizar GPU->CPU
+    
+    // Constructor alternativo para carga
+    CudaNeuralNet(const std::string& filename);
     
     CudaNeuralNet(int i_size, int h_size, int o_size, double lr);
     ~CudaNeuralNet();
@@ -265,6 +273,143 @@ inline void CudaNeuralNet::train_step(const std::vector<double>& input, const st
     CHECK_CUDA(cudaMemcpy(h_W2, d_W2, hidden_size * output_size * sizeof(double), cudaMemcpyDeviceToHost));
     CHECK_CUDA(cudaMemcpy(h_b1, d_b1, hidden_size * sizeof(double), cudaMemcpyDeviceToHost));
     CHECK_CUDA(cudaMemcpy(h_b2, d_b2, output_size * sizeof(double), cudaMemcpyDeviceToHost));
+}
+
+inline bool CudaNeuralNet::save_to_file(const std::string& filename) {
+    // Sincronizar pesos de GPU a CPU
+    save_weights_to_host();
+    
+    std::ofstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir " << filename << " para escritura" << std::endl;
+        return false;
+    }
+    
+    // Guardar metadatos
+    file.write(reinterpret_cast<const char*>(&input_size), sizeof(input_size));
+    file.write(reinterpret_cast<const char*>(&hidden_size), sizeof(hidden_size));
+    file.write(reinterpret_cast<const char*>(&output_size), sizeof(output_size));
+    file.write(reinterpret_cast<const char*>(&learning_rate), sizeof(learning_rate));
+    
+    // Guardar pesos
+    file.write(reinterpret_cast<const char*>(h_W1), input_size * hidden_size * sizeof(double));
+    file.write(reinterpret_cast<const char*>(h_b1), hidden_size * sizeof(double));
+    file.write(reinterpret_cast<const char*>(h_W2), hidden_size * output_size * sizeof(double));
+    file.write(reinterpret_cast<const char*>(h_b2), output_size * sizeof(double));
+    
+    file.close();
+    std::cout << "Modelo guardado en: " << filename << std::endl;
+    return true;
+}
+
+inline bool CudaNeuralNet::load_from_file(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir " << filename << " para lectura" << std::endl;
+        return false;
+    }
+    
+    // Leer metadatos
+    int loaded_input, loaded_hidden, loaded_output;
+    double loaded_lr;
+    
+    file.read(reinterpret_cast<char*>(&loaded_input), sizeof(loaded_input));
+    file.read(reinterpret_cast<char*>(&loaded_hidden), sizeof(loaded_hidden));
+    file.read(reinterpret_cast<char*>(&loaded_output), sizeof(loaded_output));
+    file.read(reinterpret_cast<char*>(&loaded_lr), sizeof(loaded_lr));
+    
+    // Verificar compatibilidad
+    if (loaded_input != input_size || loaded_hidden != hidden_size || loaded_output != output_size) {
+        std::cerr << "Error: Dimensiones del modelo no coinciden" << std::endl;
+        std::cerr << "Esperado: " << input_size << "x" << hidden_size << "x" << output_size << std::endl;
+        std::cerr << "Cargado: " << loaded_input << "x" << loaded_hidden << "x" << loaded_output << std::endl;
+        return false;
+    }
+    
+    // Leer pesos
+    file.read(reinterpret_cast<char*>(h_W1), input_size * hidden_size * sizeof(double));
+    file.read(reinterpret_cast<char*>(h_b1), hidden_size * sizeof(double));
+    file.read(reinterpret_cast<char*>(h_W2), hidden_size * output_size * sizeof(double));
+    file.read(reinterpret_cast<char*>(h_b2), output_size * sizeof(double));
+    
+    file.close();
+    
+    // Copiar pesos al dispositivo
+    CHECK_CUDA(cudaMemcpy(d_W1, h_W1, input_size * hidden_size * sizeof(double), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(d_b1, h_b1, hidden_size * sizeof(double), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(d_W2, h_W2, hidden_size * output_size * sizeof(double), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(d_b2, h_b2, output_size * sizeof(double), cudaMemcpyHostToDevice));
+    
+    std::cout << "Modelo cargado desde: " << filename << std::endl;
+    return true;
+}
+
+inline void CudaNeuralNet::save_weights_to_host() {
+    // Copiar pesos de GPU a CPU
+    CHECK_CUDA(cudaMemcpy(h_W1, d_W1, input_size * hidden_size * sizeof(double), cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_b1, d_b1, hidden_size * sizeof(double), cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_W2, d_W2, hidden_size * output_size * sizeof(double), cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(h_b2, d_b2, output_size * sizeof(double), cudaMemcpyDeviceToHost));
+}
+
+// Constructor para cargar desde archivo
+inline CudaNeuralNet::CudaNeuralNet(const std::string& filename) 
+    : input_size(0), hidden_size(0), output_size(0), learning_rate(0.0) {
+    
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("No se pudo abrir el archivo del modelo: " + filename);
+    }
+    
+    // Leer metadatos
+    file.read(reinterpret_cast<char*>(&input_size), sizeof(input_size));
+    file.read(reinterpret_cast<char*>(&hidden_size), sizeof(hidden_size));
+    file.read(reinterpret_cast<char*>(&output_size), sizeof(output_size));
+    file.read(reinterpret_cast<char*>(&learning_rate), sizeof(learning_rate));
+    
+    // Allocate host memory
+    h_W1 = new double[input_size * hidden_size];
+    h_b1 = new double[hidden_size];
+    h_W2 = new double[hidden_size * output_size];
+    h_b2 = new double[output_size];
+    
+    h_input = new double[input_size];
+    h_hidden = new double[hidden_size];
+    h_output = new double[output_size];
+    h_output_delta = new double[output_size];
+    h_hidden_delta = new double[hidden_size];
+    h_target = new double[output_size];
+    
+    // Leer pesos
+    file.read(reinterpret_cast<char*>(h_W1), input_size * hidden_size * sizeof(double));
+    file.read(reinterpret_cast<char*>(h_b1), hidden_size * sizeof(double));
+    file.read(reinterpret_cast<char*>(h_W2), hidden_size * output_size * sizeof(double));
+    file.read(reinterpret_cast<char*>(h_b2), output_size * sizeof(double));
+    
+    file.close();
+    
+    // Allocate device memory
+    CHECK_CUDA(cudaMalloc(&d_W1, input_size * hidden_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_b1, hidden_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_W2, hidden_size * output_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_b2, output_size * sizeof(double)));
+    
+    CHECK_CUDA(cudaMalloc(&d_input, input_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_hidden, hidden_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_output, output_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_output_delta, output_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_hidden_delta, hidden_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_target, output_size * sizeof(double)));
+    CHECK_CUDA(cudaMalloc(&d_argmax_result, sizeof(int)));
+    
+    // Copiar pesos al dispositivo
+    CHECK_CUDA(cudaMemcpy(d_W1, h_W1, input_size * hidden_size * sizeof(double), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(d_b1, h_b1, hidden_size * sizeof(double), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(d_W2, h_W2, hidden_size * output_size * sizeof(double), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMemcpy(d_b2, h_b2, output_size * sizeof(double), cudaMemcpyHostToDevice));
+    
+    std::cout << "Modelo cargado desde archivo: " << filename << std::endl;
+    std::cout << "Dimensiones: " << input_size << " -> " << hidden_size << " -> " << output_size << std::endl;
 }
 
 #endif // NEURAL_NET_H

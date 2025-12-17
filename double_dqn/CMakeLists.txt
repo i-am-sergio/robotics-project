@@ -3,7 +3,6 @@ project(DoubleDQN_CUDA)
 
 # Configurar CUDA
 enable_language(CUDA)
-find_package(CUDA REQUIRED)
 
 # Configuración de compilación
 set(CMAKE_CXX_STANDARD 11)
@@ -16,10 +15,6 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_70 -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 # Archivos del proyecto
-set(SOURCES
-    src/main.cu  # Cambiado de .cpp a .cu
-)
-
 set(HEADERS
     include/cuda_utils.h
     include/neural_net.h
@@ -31,17 +26,25 @@ set(CUDA_SOURCES
     kernels/kernels.cu
 )
 
-# Ejecutable
-add_executable(double_dqn ${SOURCES} ${HEADERS} ${CUDA_SOURCES})
-target_include_directories(double_dqn PRIVATE include)
-target_include_directories(double_dqn PRIVATE kernels)
-
-# Configurar CUDA
-set_target_properties(double_dqn PROPERTIES
+# Ejecutable de entrenamiento
+add_executable(double_dqn_train src/main.cu ${HEADERS} ${CUDA_SOURCES})
+target_include_directories(double_dqn_train PRIVATE include)
+target_include_directories(double_dqn_train PRIVATE kernels)
+set_target_properties(double_dqn_train PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
-    CUDA_ARCHITECTURES "70" 
+    CUDA_ARCHITECTURES "70"
+)
+
+# Ejecutable de prueba
+add_executable(double_dqn_test src/test_model.cu ${HEADERS} ${CUDA_SOURCES})
+target_include_directories(double_dqn_test PRIVATE include)
+target_include_directories(double_dqn_test PRIVATE kernels)
+set_target_properties(double_dqn_test PROPERTIES
+    CUDA_SEPARABLE_COMPILATION ON
+    CUDA_ARCHITECTURES "70"
 )
 
 # Dependencias
 find_package(Threads REQUIRED)
-target_link_libraries(double_dqn Threads::Threads)
+target_link_libraries(double_dqn_train Threads::Threads)
+target_link_libraries(double_dqn_test Threads::Threads)

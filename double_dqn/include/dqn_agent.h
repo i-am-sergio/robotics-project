@@ -39,6 +39,15 @@ public:
         update_target_network();
     }
 
+    // Métodos para guardar/cargar
+    bool save(const std::string& base_filename);
+    bool load(const std::string& base_filename);
+    bool save_full_state(const std::string& filename);
+    bool load_full_state(const std::string& filename);
+    
+    // Constructor para cargar modelo entrenado
+    CudaDoubleDQNAgent(const std::string& model_path);
+
     void update_target_network() {
         target_net.copy_weights_from(policy_net);
     }
@@ -105,5 +114,118 @@ public:
         }
     }
 };
+
+inline bool CudaDoubleDQNAgent::save(const std::string& base_filename) {
+    bool success = true;
+    
+    // Guardar policy net
+    std::string policy_file = base_filename + "_policy.bin";
+    if (!policy_net.save_to_file(policy_file)) {
+        std::cerr << "Error guardando policy net" << std::endl;
+        success = false;
+    }
+    
+    // Guardar target net
+    std::string target_file = base_filename + "_target.bin";
+    if (!target_net.save_to_file(target_file)) {
+        std::cerr << "Error guardando target net" << std::endl;
+        success = false;
+    }
+    
+    // Guardar hiperparámetros
+    std::string params_file = base_filename + "_params.txt";
+    std::ofstream params(params_file);
+    if (params.is_open()) {
+        params << gamma << "\n";
+        params << epsilon << "\n";
+        params << epsilon_min << "\n";
+        params << epsilon_decay << "\n";
+        params << batch_size << "\n";
+        params << max_memory << "\n";
+        params << target_update_freq << "\n";
+        params << step_count << "\n";
+        params.close();
+        std::cout << "Hiperparámetros guardados en: " << params_file << std::endl;
+    } else {
+        std::cerr << "Error guardando hiperparámetros" << std::endl;
+        success = false;
+    }
+    
+    return success;
+}
+
+inline bool CudaDoubleDQNAgent::load(const std::string& base_filename) {
+    bool success = true;
+    
+    // Cargar policy net
+    std::string policy_file = base_filename + "_policy.bin";
+    if (!policy_net.load_from_file(policy_file)) {
+        std::cerr << "Error cargando policy net" << std::endl;
+        success = false;
+    }
+    
+    // Cargar target net
+    std::string target_file = base_filename + "_target.bin";
+    if (!target_net.load_from_file(target_file)) {
+        std::cerr << "Error cargando target net" << std::endl;
+        success = false;
+    }
+    
+    // Cargar hiperparámetros
+    std::string params_file = base_filename + "_params.txt";
+    std::ifstream params(params_file);
+    if (params.is_open()) {
+        params >> gamma;
+        params >> epsilon;
+        params >> epsilon_min;
+        params >> epsilon_decay;
+        params >> batch_size;
+        params >> max_memory;
+        params >> target_update_freq;
+        params >> step_count;
+        params.close();
+        std::cout << "Hiperparámetros cargados desde: " << params_file << std::endl;
+    } else {
+        std::cerr << "Error cargando hiperparámetros" << std::endl;
+        success = false;
+    }
+    
+    return success;
+}
+
+inline bool CudaDoubleDQNAgent::save_full_state(const std::string& filename) {
+    return save(filename);
+}
+
+inline bool CudaDoubleDQNAgent::load_full_state(const std::string& filename) {
+    return load(filename);
+}
+
+// Constructor para cargar modelo entrenado
+inline CudaDoubleDQNAgent::CudaDoubleDQNAgent(const std::string& model_path)
+    : policy_net(model_path + "_policy.bin"),
+      target_net(model_path + "_target.bin") {
+    
+    // Cargar hiperparámetros
+    std::string params_file = model_path + "_params.txt";
+    std::ifstream params(params_file);
+    if (params.is_open()) {
+        params >> gamma;
+        params >> epsilon;
+        params >> epsilon_min;
+        params >> epsilon_decay;
+        params >> batch_size;
+        params >> max_memory;
+        params >> target_update_freq;
+        params >> step_count;
+        params.close();
+        std::cout << "Agente cargado desde: " << model_path << std::endl;
+    } else {
+        std::cerr << "Advertencia: No se pudieron cargar hiperparámetros, usando valores por defecto" << std::endl;
+    }
+    
+    // Sincronizar target net con policy net (por si acaso)
+    update_target_network();
+}
 
 #endif // DQN_AGENT_H

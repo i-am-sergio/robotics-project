@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <random>
 #include <algorithm> 
+#include <filesystem>
 
 // Implementaciones de funciones utilitarias
 double random_double(double min, double max) {
@@ -19,7 +20,7 @@ int argmax(const std::vector<double>& v) {
     return std::distance(v.begin(), std::max_element(v.begin(), v.end()));
 }
 
-// --- MAIN ---
+// --- MAIN DE ENTRENAMIENTO ---
 int main() {
     // Mostrar info de GPU
     int deviceCount;
@@ -79,6 +80,14 @@ int main() {
     
     std::cout << "\nTiempo de entrenamiento: " << duration.count() / 1000.0 << " segundos\n";
 
+    // GUARDAR MODELO ENTRENADO
+    std::string model_name = "double_dqn_model";
+    if (agent.save(model_name)) {
+        std::cout << "\nModelo guardado exitosamente como: " << model_name << "_*" << std::endl;
+    } else {
+        std::cerr << "\nError al guardar el modelo" << std::endl;
+    }
+
     // DEMOSTRACION FINAL
     std::cout << "\n--- TEST FINAL (Double DQN) ---\n";
     agent.epsilon = 0.0;
@@ -89,7 +98,7 @@ int main() {
     env.render();
     
     int steps = 0;
-    while(!done && steps < 50) {
+    while(!done && steps < 20) {
         int action = agent.act(state);
         std::string action_names[] = {"Arriba", "Abajo", "Izquierda", "Derecha"};
         
