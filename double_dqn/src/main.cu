@@ -5,6 +5,8 @@
 #include <vector>
 #include <chrono>
 #include <iomanip>
+#include <random>
+#include <algorithm> 
 
 // Implementaciones de funciones utilitarias
 double random_double(double min, double max) {

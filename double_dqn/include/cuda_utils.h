@@ -2,6 +2,7 @@
 #define CUDA_UTILS_H
 
 #include <iostream>
+#include <vector>
 #include <cuda_runtime.h>
 
 // --- MACRO PARA VERIFICAR ERRORES CUDA ---

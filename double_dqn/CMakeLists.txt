@@ -39,6 +39,7 @@ target_include_directories(double_dqn PRIVATE kernels)
 # Configurar CUDA
 set_target_properties(double_dqn PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
+    CUDA_ARCHITECTURES "70" 
 )
 
 # Dependencias
