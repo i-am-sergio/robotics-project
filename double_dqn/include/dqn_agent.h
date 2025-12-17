@@ -5,6 +5,9 @@
 #include <deque>
 #include <vector>
 #include <utility>
+#include <fstream>
+#include <iostream>
+#include <string>
 
 // --- ESTRUCTURAS ---
 struct Transition {

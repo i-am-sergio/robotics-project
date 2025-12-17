@@ -6,6 +6,9 @@
 #include <cmath>
 #include <random>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <string>
 
 // Declaraciones de kernels (definidos en kernels.cu)
 extern __global__ void argmax_kernel(const double* values, int* result, int size);
