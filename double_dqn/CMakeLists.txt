@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.18)
 project(DoubleDQN_CUDA)
 
 # Configurar CUDA
@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 # Archivos del proyecto
 set(SOURCES
-    src/main.cpp
+    src/main.cu  # Cambiado de .cpp a .cu
 )
 
 set(HEADERS
@@ -35,6 +35,11 @@ set(CUDA_SOURCES
 add_executable(double_dqn ${SOURCES} ${HEADERS} ${CUDA_SOURCES})
 target_include_directories(double_dqn PRIVATE include)
 target_include_directories(double_dqn PRIVATE kernels)
+
+# Configurar CUDA
+set_target_properties(double_dqn PROPERTIES
+    CUDA_SEPARABLE_COMPILATION ON
+)
 
 # Dependencias
 find_package(Threads REQUIRED)
