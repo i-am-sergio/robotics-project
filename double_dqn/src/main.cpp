@@ -87,7 +87,7 @@ int main() {
     env.render();
     
     int steps = 0;
-    while(!done && steps < 20) {
+    while(!done && steps < 50) {
         int action = agent.act(state);
         std::string action_names[] = {"Arriba", "Abajo", "Izquierda", "Derecha"};
         
