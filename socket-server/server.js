@@ -59,17 +59,26 @@ wss.on('connection', (ws, req) => {
             // Validar que sea una instrucción válida
             const validCommands = ['Arriba', 'Abajo', 'Izquierda', 'Derecha'];
             
+            // En tu server.js, modifica la sección donde procesas comandos:
             if (message.command && validCommands.includes(message.command)) {
                 console.log(`✅ Valid command from ${clientId}: ${message.command}`);
                 
-                // Procesar la instrucción (aquí iría la lógica del DQN)
+                // Procesar la instrucción
                 processCommand(message.command, clientId, message);
                 
-                // Responder con confirmación
+                // REENVIAR el comando a TODOS los clientes
+                broadcast(JSON.stringify({
+                    type: 'action_command',
+                    command: message.command,
+                    source: clientId,
+                    timestamp: new Date().toISOString()
+                }));
+                
+                // Responder con confirmación SOLO al cliente que envió
                 ws.send(JSON.stringify({
                     type: 'command_ack',
                     command: message.command,
-                    status: 'processed',
+                    status: 'broadcasted',  // Cambiado a 'broadcasted'
                     timestamp: new Date().toISOString(),
                     clientId: clientId
                 }));
