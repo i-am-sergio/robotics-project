@@ -35,7 +35,7 @@ int main() {
     
     int N = 10;
     GridEnvironment env(N);
-    CudaDoubleDQNAgent agent(env.get_state_size(), 64, env.get_action_size());
+    CudaDoubleDQNAgent agent(env.get_state_size(), 32, env.get_action_size());
 
     int episodes = 1000;
     

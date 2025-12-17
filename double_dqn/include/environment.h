@@ -14,7 +14,8 @@ class GridEnvironment {
 public:
     GridEnvironment(int n) : size(n) {
         gx = n-1; gy = n-1;
-        traps = {{1, 1}, {1, 2}, {3, 2}, {3, 3}, {2, 4}}; 
+        traps = {{1, 1}, {3, 2}, {3, 3}, {2, 4},
+                 {5, 5}, {5, 6}, {7, 8}, {6, 8}};
     }
 
     int get_state_size() { return size * size; }
