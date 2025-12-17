@@ -23,7 +23,7 @@ const wss = new WebSocketServer({ server });
 // Almacenar conexiones activas
 const connections = new Set();
 
-console.log(`🚀 Starting WebSocket server on ws://${HOST}:${PORT}`);
+console.log(`Starting WebSocket server on ws://${HOST}:${PORT}`);
 
 // Manejo de conexiones WebSocket
 wss.on('connection', (ws, req) => {
@@ -31,7 +31,7 @@ wss.on('connection', (ws, req) => {
     const clientPort = req.socket.remotePort;
     const clientId = `${clientIp}:${clientPort}`;
     
-    console.log(`✅ New connection: ${clientId}`);
+    console.log(`--- New connection: ${clientId}`);
     connections.add(ws);
     
     // Enviar mensaje de bienvenida
@@ -61,7 +61,7 @@ wss.on('connection', (ws, req) => {
             
             // En tu server.js, modifica la sección donde procesas comandos:
             if (message.command && validCommands.includes(message.command)) {
-                console.log(`✅ Valid command from ${clientId}: ${message.command}`);
+                console.log(`Valid command from ${clientId}: ${message.command}`);
                 
                 // Procesar la instrucción
                 processCommand(message.command, clientId, message);
@@ -89,7 +89,7 @@ wss.on('connection', (ws, req) => {
                     timestamp: new Date().toISOString()
                 }));
             } else {
-                console.log(`❌ Invalid command from ${clientId}:`, message);
+                console.log(`[x] Invalid command from ${clientId}:`, message);
                 ws.send(JSON.stringify({
                     type: 'error',
                     message: 'Invalid command',
@@ -99,7 +99,7 @@ wss.on('connection', (ws, req) => {
             }
             
         } catch (error) {
-            console.error(`❌ Error processing message from ${clientId}:`, error);
+            console.error(`[x] Error processing message from ${clientId}:`, error);
             ws.send(JSON.stringify({
                 type: 'error',
                 message: 'Error processing message',
@@ -111,20 +111,20 @@ wss.on('connection', (ws, req) => {
     
     // Manejar cierre de conexión
     ws.on('close', () => {
-        console.log(`❌ Connection closed: ${clientId}`);
+        console.log(`[x] Connection closed: ${clientId}`);
         connections.delete(ws);
     });
     
     // Manejar errores
     ws.on('error', (error) => {
-        console.error(`⚠️ WebSocket error for ${clientId}:`, error);
+        console.error(`[!] WebSocket error for ${clientId}:`, error);
         connections.delete(ws);
     });
 });
 
 // Función para procesar comandos (aquí se integraría con el DQN)
 function processCommand(command, clientId, metadata = {}) {
-    console.log(`🔧 Processing command: ${command} from ${clientId}`);
+    console.log(`- Processing command: ${command} from ${clientId}`);
     
     // Aquí se integraría con la lógica del DQN de CUDA
     // Por ahora solo mostramos la acción
