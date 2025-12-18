@@ -1,0 +1,6 @@
+# Add build files
+
+build/
+*.o
+*.out
+*.exe
