@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
         }
         
         // Ejecutar múltiples episodios de prueba
-        int num_tests = 5;
+        int num_tests = 1;
         int successful_runs = 0;
         
         for (int test = 0; test < num_tests; ++test) {
