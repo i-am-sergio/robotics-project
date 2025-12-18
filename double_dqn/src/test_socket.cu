@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     }
     
     // Configurar WebSocket
-    std::string ws_address = "127.0.0.1";
+    std::string ws_address = "10.7.134.228";
     int ws_port = 5555;
     
     if (argc > 2) {
