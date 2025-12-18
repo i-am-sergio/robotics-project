@@ -6,8 +6,10 @@
 #include <chrono>
 #include <iomanip>
 #include <random>
-#include <algorithm> 
-#include <filesystem>
+#include <algorithm>
+#include <sys/stat.h>  // REEMPLAZO para filesystem
+#include <unistd.h>    // Para access()
+#include <cstdio>      // Para remove()
 
 // Implementaciones de funciones utilitarias
 double random_double(double min, double max) {
@@ -18,6 +20,16 @@ double random_double(double min, double max) {
 
 int argmax(const std::vector<double>& v) {
     return std::distance(v.begin(), std::max_element(v.begin(), v.end()));
+}
+
+// Función auxiliar para verificar si un archivo existe
+bool file_exists(const std::string& filename) {
+    return access(filename.c_str(), F_OK) != -1;
+}
+
+// Función auxiliar para crear directorio
+bool create_directory(const std::string& dirname) {
+    return mkdir(dirname.c_str(), 0777) == 0;
 }
 
 // --- MAIN DE ENTRENAMIENTO ---
@@ -38,7 +50,7 @@ int main() {
     
     int N = 10;
     GridEnvironment env(N);
-    CudaDoubleDQNAgent agent(env.get_state_size(), 32, env.get_action_size());
+    CudaDoubleDQNAgent agent(env.get_state_size(), 64, env.get_action_size());
 
     int episodes = 1000;
     
@@ -82,13 +94,33 @@ int main() {
 
     // GUARDAR MODELO ENTRENADO
     std::string model_name = "double_dqn_model";
+    
+    // Opcional: crear directorio para modelos
+    // if (!create_directory("models")) {
+    //     std::cout << "Nota: No se pudo crear directorio 'models', guardando en directorio actual\n";
+    //     model_name = "./" + model_name;
+    // } else {
+    //     model_name = "models/" + model_name;
+    // }
+    
     if (agent.save(model_name)) {
         std::cout << "\nModelo guardado exitosamente como: " << model_name << "_*" << std::endl;
+        
+        // Verificar que los archivos existen
+        std::string policy_file = model_name + "_policy.bin";
+        std::string target_file = model_name + "_target.bin";
+        std::string params_file = model_name + "_params.txt";
+        
+        if (file_exists(policy_file) && file_exists(target_file) && file_exists(params_file)) {
+            std::cout << "Archivos verificados correctamente." << std::endl;
+        } else {
+            std::cerr << "Advertencia: Algunos archivos no se crearon correctamente." << std::endl;
+        }
     } else {
         std::cerr << "\nError al guardar el modelo" << std::endl;
     }
 
-    // DEMOSTRACION FINAL
+    // DEMOSTRACION FINAL (opcional, comentar si no se quiere)
     std::cout << "\n--- TEST FINAL (Double DQN) ---\n";
     agent.epsilon = 0.0;
     auto state = env.reset();
