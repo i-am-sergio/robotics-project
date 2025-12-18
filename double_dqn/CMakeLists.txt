@@ -20,6 +20,7 @@ set(HEADERS
     include/neural_net.h
     include/dqn_agent.h
     include/environment.h
+    include/socket_utils.h 
 )
 
 set(CUDA_SOURCES
@@ -35,7 +36,7 @@ set_target_properties(double_dqn_train PROPERTIES
     CUDA_ARCHITECTURES "70"
 )
 
-# Ejecutable de prueba
+# Ejecutable de test
 add_executable(double_dqn_test src/test_model.cu ${HEADERS} ${CUDA_SOURCES})
 target_include_directories(double_dqn_test PRIVATE include)
 target_include_directories(double_dqn_test PRIVATE kernels)
@@ -44,7 +45,18 @@ set_target_properties(double_dqn_test PROPERTIES
     CUDA_ARCHITECTURES "70"
 )
 
+
+# Ejecutable de test con WebSocket
+add_executable(double_dqn_socket src/test_socket.cu ${HEADERS} ${CUDA_SOURCES})
+target_include_directories(double_dqn_socket PRIVATE include)
+target_include_directories(double_dqn_socket PRIVATE kernels)
+set_target_properties(double_dqn_socket PROPERTIES
+    CUDA_SEPARABLE_COMPILATION ON
+    CUDA_ARCHITECTURES "70"
+)
+
 # Dependencias
 find_package(Threads REQUIRED)
 target_link_libraries(double_dqn_train Threads::Threads)
 target_link_libraries(double_dqn_test Threads::Threads)
+target_link_libraries(double_dqn_socket Threads::Threads)

@@ -1,3 +1,13 @@
+## Compile and Run DDQN
+
+```sh
+git clone https://github.com/i-am-sergio/robotics-project/
+cd robotics-project/double_dqn/
+mkdir build && cd build && cmake .. && make
+cp ../models/* .
+./double_dqn_test
+```
+
 ## Socket server
 
 ### Inicializar proyecto
