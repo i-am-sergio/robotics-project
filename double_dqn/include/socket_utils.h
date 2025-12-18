@@ -16,7 +16,7 @@ private:
     int sockfd = -1;
     bool connected = false;
     std::mutex socket_mutex;
-    std::string server_address = "127.0.0.1";
+    std::string server_address = "10.7.134.228"; // "127.0.0.1";
     int port = 5555;
     
     std::string create_json_message(const std::string& command, int step, double reward) {
