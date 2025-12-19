@@ -200,7 +200,7 @@ npm install ws
 
 ### Ejecutar el Servidor
 
-Inicie el servicio mediante Node.js con el siguiente comando:
+Inicie el servidor mediante el siguiente comando:
 
 ```sh
 node server.js
