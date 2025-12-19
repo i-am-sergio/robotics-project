@@ -70,6 +70,7 @@ int main(int argc, char* argv[]) {
         // Conectar a WebSocket
         WebSocketClient ws_client(ws_address, ws_port);
         bool ws_connected = false;
+        ws_client.set_send_delay(500);
         
         std::cout << "\nIntentando conectar al servidor WebSocket..." << std::endl;
         for (int attempt = 0; attempt < 3; ++attempt) {
@@ -120,7 +121,7 @@ int main(int argc, char* argv[]) {
                 
                 // Enviar al servidor WebSocket
                 if (ws_connected) {
-                    if (!ws_client.send_action(action_name, steps + 1, res.first)) {
+                    if (!ws_client.send_action_with_delay(action_name, steps + 1, res.first)) {
                         std::cout << "⚠️  Conexión WebSocket perdida, continuando sin ella..." << std::endl;
                         ws_connected = false;
                     }

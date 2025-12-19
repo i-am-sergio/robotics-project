@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <thread>
 #include <mutex>
+#include <chrono>
 
 class WebSocketClient {
 private:
@@ -18,6 +19,7 @@ private:
     std::mutex socket_mutex;
     std::string server_address = "10.7.134.228"; // "127.0.0.1";
     int port = 5555;
+    int delay_ms = 500;
     
     std::string create_json_message(const std::string& command, int step, double reward) {
         return "{\"command\":\"" + command + "\",\"step\":" + 
@@ -187,6 +189,25 @@ public:
     
     bool is_connected() const {
         return connected;
+    }
+
+    void set_send_delay(int milliseconds) {
+        delay_ms = milliseconds;
+        std::cout << "⏱️  Delay configurado a " << delay_ms << " ms entre envíos" << std::endl;
+    }
+    
+    int get_send_delay() const {
+        return delay_ms;
+    }
+    
+    bool send_action_with_delay(const std::string& action, int step, double reward) {
+        bool success = send_action(action, step, reward);
+        
+        if (success && delay_ms > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+        }
+        
+        return success;
     }
     
     ~WebSocketClient() {
