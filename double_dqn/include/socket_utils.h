@@ -83,7 +83,7 @@ public:
     bool connect_to_server() {
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0) {
-            std::cerr << "❌ Error creating socket" << std::endl;
+            std::cerr << "Error creating socket" << std::endl;
             return false;
         }
         
@@ -93,25 +93,25 @@ public:
         serv_addr.sin_port = htons(port);
         
         if (inet_pton(AF_INET, server_address.c_str(), &serv_addr.sin_addr) <= 0) {
-            std::cerr << "❌ Invalid address: " << server_address << std::endl;
+            std::cerr << "Invalid address: " << server_address << std::endl;
             close(sockfd);
             sockfd = -1;
             return false;
         }
         
-        std::cout << "📡 Connecting to ws://" << server_address << ":" << port << "..." << std::endl;
+        std::cout << "- Connecting to ws://" << server_address << ":" << port << "..." << std::endl;
         
         if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-            std::cerr << "❌ Connection failed" << std::endl;
+            std::cerr << "Connection failed" << std::endl;
             close(sockfd);
             sockfd = -1;
             return false;
         }
         
-        std::cout << "✅ Socket connected, sending handshake..." << std::endl;
+        std::cout << "- Socket connected, sending handshake..." << std::endl;
         
         if (!send_websocket_handshake()) {
-            std::cerr << "❌ Handshake failed" << std::endl;
+            std::cerr << "Handshake failed !!!" << std::endl;
             close(sockfd);
             sockfd = -1;
             return false;
@@ -129,7 +129,7 @@ public:
                 
                 if (response.find("HTTP/1.1 101") != std::string::npos ||
                     response.find("Switching Protocols") != std::string::npos) {
-                    std::cout << "✅ WebSocket connection established" << std::endl;
+                    std::cout << "- WebSocket connection established" << std::endl;
                     handshake_complete = true;
                     connected = true;
                 }
@@ -138,7 +138,7 @@ public:
         }
         
         if (!handshake_complete) {
-            std::cerr << "❌ Handshake timeout" << std::endl;
+            std::cerr << "Handshake timeout !!!" << std::endl;
             close(sockfd);
             sockfd = -1;
             return false;
@@ -149,7 +149,7 @@ public:
     
     bool send_action(const std::string& action, int step, double reward) {
         if (!connected || sockfd < 0) {
-            std::cerr << "❌ Not connected to WebSocket server" << std::endl;
+            std::cerr << "Not connected to WebSocket server" << std::endl;
             return false;
         }
         
@@ -160,10 +160,10 @@ public:
         int sent = send(sockfd, frame.c_str(), frame.length(), 0);
         
         if (sent > 0) {
-            std::cout << "📤 Sent to server: " << action << " (step " << step << ", reward " << reward << ")" << std::endl;
+            std::cout << "Sent to server: " << action << " (step " << step << ", reward " << reward << ")" << std::endl;
             return true;
         } else {
-            std::cerr << "❌ Error sending message" << std::endl;
+            std::cerr << "Error sending message" << std::endl;
             connected = false;
             return false;
         }
@@ -183,7 +183,7 @@ public:
             close(sockfd);
             sockfd = -1;
             connected = false;
-            std::cout << "👋 WebSocket connection closed" << std::endl;
+            std::cout << "WebSocket connection closed" << std::endl;
         }
     }
     
@@ -193,7 +193,7 @@ public:
 
     void set_send_delay(int milliseconds) {
         delay_ms = milliseconds;
-        std::cout << "⏱️  Delay configurado a " << delay_ms << " ms entre envíos" << std::endl;
+        std::cout << "Delay configured to " << delay_ms << " ms between sends" << std::endl;
     }
     
     int get_send_delay() const {
